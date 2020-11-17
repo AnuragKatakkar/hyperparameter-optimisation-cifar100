@@ -2,9 +2,12 @@ import torch
 from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader
 import torch.nn as nn
+from model import DenseNet121
+import torchvision
 
 from collections import namedtuple
 import itertools
+from tqdm import tqdm
 
 HP_Config = namedtuple('HP_Config', 'name model dataloader optimizer')
 
@@ -37,16 +40,16 @@ for bs in batches:
     DATALOADER_DICT[bs] = DataLoader(trainset, batch_size=bs, shuffle=True, num_workers=8 if CUDA else 1)
 
 def make_configs(all_configs=all_configs):
+    print("Building Configurations Now...")
     CONF_LIST = []
-    for idx, conf in enumerate(all_configs):
+    for idx, conf in enumerate(tqdm(list(all_configs))):
         lr = conf[0]
         bs = conf[1]
         opt = conf[2]
         mm = conf[3]
         wd = conf[4]
         conf_name = 'conf_{}_{}_{}_{}_{}'.format(lr, bs, opt, mm, wd)
-        model = torch.hub.load('pytorch/vision:v0.6.0', 'densenet121', pretrained=False)
-        model.classifier = nn.Linear(1024, NUM_CLASSES)
+        model = DenseNet121()
         dataloader = DATALOADER_DICT[bs]
         optimiser = None
         # Make optimiser
