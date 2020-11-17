@@ -20,11 +20,21 @@ NUM_CLASSES = 100
 CUDA = torch.cuda.is_available()
 DEVICE = 'cuda' if CUDA else 'cpu'
 
+# Prep dataloaders
+transform_train = transforms.Compose([
+    transforms.RandomCrop(32, padding=4),
+    transforms.RandomHorizontalFlip(),
+    transforms.ToTensor(),
+    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+])
+
+trainset = torchvision.datasets.CIFAR10(
+    root='./data', train=True, download=True, transform=transform_train)
+
 # Create the necessary Dataloaders here
 DATALOADER_DICT = {}
 for bs in batches:
-    # DATALOADER_DICT[bs] = DataLoader(None, batch_size=bs, shuffle=True, num_workers=8 if CUDA else 1)
-    DATALOADER_DICT[bs] = None
+    DATALOADER_DICT[bs] = DataLoader(trainset, batch_size=bs, shuffle=True, num_workers=8 if CUDA else 1)
 
 def make_configs(all_configs=all_configs):
     CONF_LIST = []
