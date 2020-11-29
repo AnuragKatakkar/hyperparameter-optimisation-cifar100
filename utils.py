@@ -9,6 +9,8 @@ import torch.nn.functional as F
 from collections import namedtuple
 import itertools
 from tqdm import tqdm
+import numpy as np
+import random
 
 HP_Config = namedtuple('HP_Config', 'name model dataloader optimizer')
 
@@ -25,53 +27,49 @@ DEVICE = 'cuda' if CUDA else 'cpu'
 CUDA = torch.cuda.is_available()
 DEVICE = 'cuda' if CUDA else 'cpu'
 
-# Prep dataloaders
-transform_train = transforms.Compose([
-    transforms.RandomCrop(32, padding=4),
-    transforms.RandomHorizontalFlip(),
-    transforms.ToTensor(),
-    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-])
+class HP_Config:
+    def __init__(self, bs, lr, opt, opt_name, mm, wd, model):
+        self.lr = lr
+        self.bs = bs
+        self.optimizer = opt
+        self.opt_name = opt_name
+        self.mm = mm
+        self.wd = wd
+        self.name = 'conf_{}_{}_{}_{}_{}'.format(lr, bs, opt_name, mm, wd)
+        self.val_losses = []
+        self.val_acc = []
+        self.model = model
+        self.dataloader = None
+        self.epochs_run = 0
+        self.best = False
+    
+    def set_dataloader(self, dataloader):
+      self.dataloader = dataloader
 
-trainset = torchvision.datasets.CIFAR10(
-    root='./data', train=True, download=True, transform=transform_train)
+def get_config():
+    lr = np.random.uniform(1e-1, 1e-3)
+    bs = random.choice(BATCHES)
+    opt = random.choice(OPTIMS)
+    mm = np.random.uniform(0.8, 0.9)
+    wd = np.random.uniform(0.7, 0.9)
+    model = DenseNet121()
+    optimiser = None
+    # Make optimiser
+    if opt == 'Adam':
+        optimiser = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=wd)
+    elif opt == 'SGD':
+        optimiser = torch.optim.SGD(model.parameters(), lr=lr, weight_decay=wd, momentum=mm)
+    elif opt == 'RMSprop':
+        optimiser = torch.optim.RMSprop(model.parameters(), lr=lr, weight_decay=wd, momentum=mm)
 
-# Create the necessary Dataloaders here
-DATALOADER_DICT = {}
-for bs in BATCHES:
-    DATALOADER_DICT[bs] = DataLoader(trainset, batch_size=bs, shuffle=True, num_workers=8 if CUDA else 1)
-
-def make_configs():
-    print("Building Configurations Now...")
-    CONF_LIST = []
-    all_configs = itertools.product(LR, BATCHES, OPTIMS, MOMENT, WEIGHT_DECAY)
-    for idx, conf in enumerate(tqdm(list(all_configs))):
-        lr = conf[0]
-        bs = conf[1]
-        opt = conf[2]
-        mm = conf[3]
-        wd = conf[4]
-        conf_name = 'conf_{}_{}_{}_{}_{}'.format(lr, bs, opt, mm, wd)
-        model = DenseNet121()
-        dataloader = DATALOADER_DICT[bs]
-        optimiser = None
-        # Make optimiser
-        if opt == 'Adam':
-            optimiser = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=wd)
-        elif opt == 'SGD':
-            optimiser = torch.optim.SGD(model.parameters(), lr=lr, weight_decay=wd, momentum=mm)
-        elif opt == 'RMSprop':
-            optimiser = torch.optim.RMSprop(model.parameters(), lr=lr, weight_decay=wd, momentum=mm)
-
-        CONF_LIST.append(HP_Config(conf_name, model, dataloader, optimiser))
-
-    return CONF_LIST
+    return HP_Config(bs, lr, optimiser, opt, mm, wd, model)
 
 def train_model(config, test_loader, criterion, task='Classification', numEpochs=1):
     print("Training :{}".format(config.name))
     config.model.train()
 
     for epoch in range(numEpochs):
+        config.epochs_run += 1
         avg_loss = 0.0
         for batch_num, (feats, labels) in enumerate(tqdm(config.dataloader)):
             feats, labels = feats.to(DEVICE), labels.to(DEVICE)
@@ -85,23 +83,16 @@ def train_model(config, test_loader, criterion, task='Classification', numEpochs
             
             avg_loss += loss.item()
 
-            if batch_num % 500 == 499:
-                print('Epoch: {}\tBatch: {}\tAvg-Loss: {:.4f}'.format(epoch+1, batch_num+1, avg_loss/500))
-                avg_loss = 0.0    
-            
             torch.cuda.empty_cache()
             del feats
             del labels
             del loss
         
-        if task == 'Classification':
-            val_loss, val_acc = test_classify(config.model, test_loader, criterion)
-            train_loss, train_acc = test_classify(config.model, config.dataloader, criterion)
-            print('Train Loss: {:.4f}\tTrain Accuracy: {:.4f}\tVal Loss: {:.4f}\tVal Accuracy: {:.4f}'.
-                  format(train_loss, train_acc, val_loss, val_acc))
-        else:
-            test_verify(model, test_loader)
-
+        val_loss, val_acc = test_classify(config.model, test_loader, criterion)
+        config.val_loss.append(val_loss)
+        config.val_acc.append(val_acc)
+        print("Epoch : {}, Avg Train Loss : {}, Val Loss : {}, Val Acc : {}".format(config.epochs_run, avg_loss/len(config.dataloader), val_loss, val_acc))
+        return val_loss
 
 def test_classify(model, test_loader, criterion):
     model.eval()
