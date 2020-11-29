@@ -89,7 +89,7 @@ def train_model(config, test_loader, criterion, task='Classification', numEpochs
             del loss
         
         val_loss, val_acc = test_classify(config.model, test_loader, criterion)
-        config.val_loss.append(val_loss)
+        config.val_losses.append(val_loss)
         config.val_acc.append(val_acc)
         print("Epoch : {}, Avg Train Loss : {}, Val Loss : {}, Val Acc : {}".format(config.epochs_run, avg_loss/len(config.dataloader), val_loss, val_acc))
         return val_loss
@@ -119,5 +119,10 @@ def test_classify(model, test_loader, criterion):
     return np.mean(test_loss), accuracy/total
 
 
-def test_verify(model, test_loader):
-    raise NotImplementedError
+def plot_val_loss(val_losses, s):
+  colors = ['b', 'k', 'r', 'c', 'o', 'g', 'y']
+  plt.figure()
+  for vl in val_losses:
+    plt.plot(np.arange(0, len(vl), 1), vl, random.choice(colors))
+
+  plt.savefig('HP_s_{}'.format(s))
