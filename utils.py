@@ -46,12 +46,19 @@ class HP_Config:
     def set_dataloader(self, dataloader):
       self.dataloader = dataloader
 
-def get_config():
-    lr = np.random.uniform(1e-1, 1e-3)
-    bs = random.choice(BATCHES)
-    opt = random.choice(OPTIMS)
-    mm = np.random.uniform(0.8, 0.9)
-    wd = np.random.uniform(0.7, 0.9)
+def get_config(lr=None, bs=None, opt=None, mm=None, wd=None):
+    if lr == None:
+        lr = np.random.normal(1e-3 ,1e-4)
+        while (lr<0):
+            lr = np.random.normal(1e-3, 1e-4)
+    if bs == None:
+        bs = random.choice(BATCHES)
+    if opt == None:
+        opt = random.choice(OPTIMS)
+    if mm == None:
+        mm = np.random.normal(0.9, 1e-3)
+    if wd == None:
+        wd = np.random.normal(5e-6, 1e-7)
     model = DenseNet121()
     optimiser = None
     # Make optimiser
@@ -92,7 +99,7 @@ def train_model(config, test_loader, criterion, task='Classification', numEpochs
         config.val_losses.append(val_loss)
         config.val_acc.append(val_acc)
         print("Epoch : {}, Avg Train Loss : {}, Val Loss : {}, Val Acc : {}".format(config.epochs_run, avg_loss/len(config.dataloader), val_loss, val_acc))
-        return val_loss
+    return val_loss
 
 def test_classify(model, test_loader, criterion):
     model.eval()
