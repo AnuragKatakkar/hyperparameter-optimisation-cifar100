@@ -35,7 +35,7 @@ class HP_Config:
         self.opt_name = opt_name
         self.mm = mm
         self.wd = wd
-        self.name = 'conf_{}_{}_{}_{}_{}'.format(lr, bs, opt_name, mm, wd)
+        self.name = 'conf_{:.3f}_{}_{}_{:.3f}_{:.3f}'.format(lr, bs, opt_name, mm, wd)
         self.val_losses = []
         self.val_acc = []
         self.model = model
@@ -46,17 +46,20 @@ class HP_Config:
     def set_dataloader(self, dataloader):
       self.dataloader = dataloader
 
+    def get_val_dict():
+        return {self.name : [self.val_losses, self.val_acc]}
+
 def get_config(lr=None, bs=None, opt=None, mm=None, wd=None):
     if lr == None:
-        lr = np.random.normal(1e-3 ,1e-4)
+        lr = np.random.normal(0.15 ,1e-3)
         while (lr<0):
-            lr = np.random.normal(1e-3, 1e-4)
+            lr = np.random.normal(0.15, 1e-3)
     if bs == None:
         bs = random.choice(BATCHES)
     if opt == None:
         opt = random.choice(OPTIMS)
     if mm == None:
-        mm = np.random.normal(0.9, 1e-3)
+        mm = np.random.normal(0.9, 1e-2)
     if wd == None:
         wd = np.random.normal(5e-6, 1e-7)
     model = DenseNet121()
