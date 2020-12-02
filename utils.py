@@ -46,8 +46,14 @@ class HP_Config:
     def set_dataloader(self, dataloader):
       self.dataloader = dataloader
 
-    def get_val_dict():
+    def get_val_dict(self):
         return {self.name : [self.val_losses, self.val_acc]}
+
+    def append_val(self, val, mode='loss'):
+        if mode=='loss':
+            self.val_losses.append(val)
+        else:
+            self.val_acc.append(val)
 
 def get_config(lr=None, bs=None, opt=None, mm=None, wd=None):
     if lr == None:
@@ -99,8 +105,8 @@ def train_model(config, test_loader, criterion, task='Classification', numEpochs
             del loss
         
         val_loss, val_acc = test_classify(config.model, test_loader, criterion)
-        config.val_losses.append(val_loss)
-        config.val_acc.append(val_acc)
+        config.append_val(val_loss)
+        config.append_val(val_acc, 'acc')
         print("Epoch : {}, Avg Train Loss : {}, Val Loss : {}, Val Acc : {}".format(config.epochs_run, avg_loss/len(config.dataloader), val_loss, val_acc))
     return val_loss
 

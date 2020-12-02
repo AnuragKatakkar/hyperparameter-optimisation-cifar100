@@ -46,6 +46,9 @@ DATALOADER_DICT = {}
 for bs in BATCHES:
     DATALOADER_DICT[bs] = DataLoader(trainset, batch_size=bs, shuffle=True, num_workers=8 if CUDA else 1)
 
+#Implement your HP Optimisation Technique Here:
+# This implementation of Hyperband is taken from the website : https://docs.google.com/document/d/1Wp8_DiIlnAb6b_GTkZ0dWWjq6nbL4oP09wI6CBtu1CY/edit
+# And is authored by Kevin Jamieson
 
 max_iter = 81  # maximum iterations/epochs per configuration
 eta = 3 # defines downsampling rate (default=3)
